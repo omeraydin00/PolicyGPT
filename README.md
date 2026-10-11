@@ -1,4 +1,6 @@
-# PolicyGPT
+<p align="center">
+  <img src="./assets/header.svg" alt="PolicyGPT" width="100%" />
+</p>
 
 Turns long government documents into short, step-by-step answers.
 
