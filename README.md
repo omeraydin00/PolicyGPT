@@ -2,23 +2,17 @@
   <img src="./assets/header.svg" alt="PolicyGPT" width="100%" />
 </p>
 
-Turns long government documents into short, step-by-step answers.
+Answers questions about official procedures in Turkey with numbered steps, taken from the documents it is given.
 
 Python · LangChain · FAISS · Ollama (Mistral) · Flask
 
-<p>
-  <img width="49%" alt="Residence certificate" src="https://github.com/user-attachments/assets/7c4fcef2-e3ef-4a86-937f-005e8d71da51" />
-  <img width="49%" alt="Tax debt inquiry" src="https://github.com/user-attachments/assets/4302ce1d-e0ab-4044-84a7-9f391ccdc577" />
-</p>
+<img alt="PolicyGPT answering how to get a residence certificate" src="screenshots/cevap.png" />
 
-Official procedures in Turkey, such as registering a residence, getting a social security record, applying for citizenship or checking tax debt, are explained in long PDFs written in legal language. PolicyGPT reads those documents and answers a question with a numbered list of what to do, based on the documents rather than on the model's own guesses.
+Ask how to get a residence certificate, register an employee with SGK, apply for citizenship or register for tax, and PolicyGPT answers with what to do, step by step, and shows which document the answer came from. It answers only from the documents: a question none of them covers, such as how to get a passport, gets "Bu konu belgelerde geçmiyor." instead of a guess.
 
-The PDFs in `data/` are split into overlapping chunks, embedded with `all-MiniLM-L6-v2` and stored in a FAISS index. For each question the closest passages are passed to Mistral, which runs locally through Ollama, so no document or question leaves the computer.
+The PDFs in `data/` are split into chunks, embedded with `all-MiniLM-L6-v2` and kept in a FAISS index on disk, rebuilt only when a PDF is added or changed. For each question the closest passages go to Mistral with their titles, and the model names the document it used. Mistral runs locally through Ollama, so no document or question leaves the computer.
 
-<p>
-  <img width="49%" alt="Social security record" src="https://github.com/user-attachments/assets/e4b61ba5-73c1-482f-b1f3-b736248c31da" />
-  <img width="49%" alt="Citizenship application" src="https://github.com/user-attachments/assets/dfefa890-048d-47a7-9787-e712c14c4ffc" />
-</p>
+The four PDFs in `data/` are short guides written for the project, one per topic, so the answers are only as complete and current as they are. Check anything important on the official portal.
 
 ## Running it
 
@@ -29,16 +23,11 @@ ollama pull mistral
 
 git clone https://github.com/omeraydin00/PolicyGPT.git
 cd PolicyGPT/PolicyGPT
-python -m venv venv && source venv/bin/activate
+python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 python app.py
 ```
 
-Then open http://127.0.0.1:5000 and ask something like *"İkametgah belgesi nasıl alınır?"*. To add a topic, put its PDF in `data/` and add the path to `pdf_files` in `rag_engine.py`.
-
-## Notes
-
-- The index is rebuilt for every question; saving it to disk would make answers much faster.
-- Answers are only as current as the PDFs. Check anything important on the official portal.
+Then open http://127.0.0.1:5000 and pick one of the example questions, or type your own. To add a topic, put its PDF in `data/` and give it a title in `TITLES` in `rag_engine.py`. The first question takes a little longer while the embedding model loads and the index is built.
 
 Made for the Deep Learning course at Sakarya University.

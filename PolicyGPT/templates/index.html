@@ -2,26 +2,128 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PolicyGPT</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <div class="container">
-        <h1>📘 PolicyGPT</h1>
-        <form method="post">
-            <div class="form-group">
-                <label for="question">Soru:</label>
-                <textarea name="question" id="question" placeholder="Sorunuz..." required></textarea>
+    <header class="topbar">
+        <div class="brand">
+            <span class="logo" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M9 11h7M9 14.5h7M9 18h4"/></svg>
+            </span>
+            <div>
+                <strong>PolicyGPT</strong>
+                <span>Resmî işlemler, adım adım</span>
             </div>
-            <button type="submit">Sor</button>
-        </form>
-
-        {% if answer.steps %}
-        <div class="answer">
-            <h2>✅ Adım Adım Rehber</h2>
-            <p style="white-space: pre-line;">{{ answer.steps }}</p>
         </div>
-        {% endif %}
-    </div>
+        <span class="local">Mistral, bu bilgisayarda çalışıyor</span>
+    </header>
+
+    <main>
+        <section class="ask">
+            <form id="soruForm">
+                <label for="question">Ne yapmak istiyorsunuz?</label>
+                <div class="field">
+                    <textarea name="question" id="question" rows="2" placeholder="Örn. İkametgâh belgesi nasıl alınır?" required></textarea>
+                    <button type="submit" class="primary" id="sorButton">Sor</button>
+                </div>
+            </form>
+            <div class="examples" aria-label="Örnek sorular">
+                {% for example in examples %}
+                <button type="button" class="chip" data-example="{{ example }}">{{ example }}</button>
+                {% endfor %}
+            </div>
+        </section>
+
+        <div class="grid">
+            <section class="card answer" aria-live="polite">
+                <div class="placeholder" id="bos">
+                    <h2>Sorunuzu yazın ya da bir örnek seçin.</h2>
+                    <p>Cevap yalnızca soldaki resmî belgelerden çıkarılır, kaynakları cevabın altında görünür.</p>
+                </div>
+                <div class="loading" id="yukleniyor" hidden>
+                    <span class="spinner" aria-hidden="true"></span>
+                    <span>Belgeler taranıyor, cevap hazırlanıyor…</span>
+                </div>
+                <div id="cevap" hidden>
+                    <p class="asked" id="soruMetni"></p>
+                    <h2>Adım adım rehber</h2>
+                    <ol class="steps" id="adimlar"></ol>
+                    <p class="note" id="not" hidden></p>
+                    <div class="sources">
+                        <h3>Kaynaklar</h3>
+                        <ul id="kaynaklar"></ul>
+                    </div>
+                </div>
+                <p class="error" id="hata" hidden></p>
+            </section>
+
+            <aside class="card docs">
+                <h2>Belgeler</h2>
+                <ul>
+                    {% for doc in documents %}
+                    <li><span class="doc-icon" aria-hidden="true"></span><div><strong>{{ doc.title }}</strong><span>{{ doc.file }}</span></div></li>
+                    {% endfor %}
+                </ul>
+                <p class="hint">Yeni bir PDF'i <code>data/</code> klasörüne koymanız yeterli; dizin bir sonraki soruda yenilenir.</p>
+            </aside>
+        </div>
+    </main>
+
+    <script>
+        const form = document.getElementById('soruForm');
+        const input = document.getElementById('question');
+        const show = (id, on) => { document.getElementById(id).hidden = !on; };
+
+        async function ask(question) {
+            show('bos', false); show('cevap', false); show('hata', false); show('yukleniyor', true);
+            document.getElementById('sorButton').disabled = true;
+            try {
+                const response = await fetch('/sor', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question })
+                });
+                const data = await response.json();
+                if (!response.ok || data.error) throw new Error(data.error || 'Bir hata oluştu.');
+
+                document.getElementById('soruMetni').textContent = question;
+                const steps = document.getElementById('adimlar');
+                steps.replaceChildren(...data.steps.map(step => Object.assign(document.createElement('li'), { textContent: step })));
+                const note = document.getElementById('not');
+                note.textContent = data.note || '';
+                note.hidden = !data.note;
+                document.getElementById('kaynaklar').replaceChildren(...data.sources.map(s => {
+                    const li = document.createElement('li');
+                    li.innerHTML = '<strong></strong><span></span>';
+                    li.firstChild.textContent = s.title;
+                    li.lastChild.textContent = `${s.file}, sayfa ${s.page}`;
+                    return li;
+                }));
+                show('cevap', true);
+            } catch (error) {
+                const el = document.getElementById('hata');
+                el.textContent = error.message;
+                show('hata', true);
+            } finally {
+                show('yukleniyor', false);
+                document.getElementById('sorButton').disabled = false;
+            }
+        }
+
+        form.addEventListener('submit', event => {
+            event.preventDefault();
+            const question = input.value.trim();
+            if (question) ask(question);
+        });
+        input.addEventListener('keydown', event => {
+            if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); form.requestSubmit(); }
+        });
+        document.querySelectorAll('[data-example]').forEach(chip => chip.addEventListener('click', () => {
+            input.value = chip.dataset.example;
+            ask(chip.dataset.example);
+        }));
+    </script>
 </body>
 </html>
