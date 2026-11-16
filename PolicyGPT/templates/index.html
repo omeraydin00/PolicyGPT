@@ -48,10 +48,10 @@
                 </div>
                 <div id="cevap" hidden>
                     <p class="asked" id="soruMetni"></p>
-                    <h2>Adım adım rehber</h2>
+                    <h2 id="rehberBaslik">Adım adım rehber</h2>
                     <ol class="steps" id="adimlar"></ol>
                     <p class="note" id="not" hidden></p>
-                    <div class="sources">
+                    <div class="sources" id="kaynakKutusu">
                         <h3>Kaynaklar</h3>
                         <ul id="kaynaklar"></ul>
                     </div>
@@ -94,6 +94,9 @@
                 const note = document.getElementById('not');
                 note.textContent = data.note || '';
                 note.hidden = !data.note;
+                // nothing to list when the documents don't cover the question
+                show('rehberBaslik', data.steps.length > 0);
+                show('kaynakKutusu', data.sources.length > 0);
                 document.getElementById('kaynaklar').replaceChildren(...data.sources.map(s => {
                     const li = document.createElement('li');
                     li.innerHTML = '<strong></strong><span></span>';
